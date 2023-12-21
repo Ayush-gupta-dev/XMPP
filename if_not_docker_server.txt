@@ -1,0 +1,70 @@
+const xmpp = require('node-xmpp-server');
+
+// Create a new server instance
+const server = new xmpp.C2S.TCPServer({
+  port: 5222,  // XMPP standard port
+  domain: 'localhost',
+});
+
+// Register event handler for user registration
+server.on('register', function (opts, cb) {
+  // Check if the user already exists
+  // In a production environment, you would typically store user data in a database
+  const userExists = checkIfUserExists(opts);
+
+  if (!userExists) {
+    // Register the user
+    registerUser(opts);
+    cb(true);
+  } else {
+    // User already exists
+    cb(false);
+  }
+});
+
+// Register event handler for incoming stanzas (messages)
+server.on('connection', function (client) {
+  console.log('Client connected:', client.jid.user);
+
+  client.on('stanza', function (stanza) {
+    // Handle incoming stanzas (messages)
+    console.log('Received stanza:', stanza.toString());
+
+    // Example: Echo the message back to the sender
+    if (stanza.is('message') && stanza.attrs.type !== 'error') {
+      const reply = new xmpp.Element('message', {
+        to: stanza.attrs.from,
+        from: stanza.attrs.to,
+        type: 'chat',
+      }).c('body').t(`You said: ${stanza.getChildText('body')}`);
+
+      client.send(reply);
+    }
+  });
+});
+
+// Start the server
+server.listen(() => {
+  console.log('XMPP server is running on port 5222');
+});
+
+// Helper function to check if the user already exists (in-memory example)
+function checkIfUserExists(opts) {
+  // In a production environment, you would typically check a database
+  return users.some(user => user.jid.user === opts.username && user.jid.domain === opts.domain);
+}
+
+// Helper function to register a new user (in-memory example)
+function registerUser(opts) {
+  // In a production environment, you would typically store user data in a database
+  users.push({
+    jid: {
+      user: opts.username,
+      domain: opts.domain,
+    },
+    password: opts.password,
+  });
+}
+
+// In-memory storage for registered users (for demonstration purposes)
+const users = [];
